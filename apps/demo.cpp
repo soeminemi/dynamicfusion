@@ -38,7 +38,7 @@ struct DynamicFusionApp
         cv::Mat display;
         depth.convertTo(display, CV_8U, 255.0/4000);
         cv::imshow("Depth", display);
-        cvWaitKey(10);
+        cv:waitKey(10);
     }
 
     void show_raycasted(KinFu& kinfu, int i)
@@ -58,7 +58,7 @@ struct DynamicFusionApp
 #endif
 
         cv::imshow("Scene", view_host_);
-        cvWaitKey(100);
+        cv::waitKey(100);
 
     }
 
@@ -84,8 +84,8 @@ struct DynamicFusionApp
         std::sort(images.begin(), images.end());
 
         for (int i = 0; i < depths.size() && !exit_ && !viz.wasStopped(); i++) {
-            image = cv::imread(images[i], CV_LOAD_IMAGE_COLOR);
-            depth = cv::imread(depths[i], CV_LOAD_IMAGE_ANYDEPTH);
+            image = cv::imread(images[i], cv::IMREAD_COLOR);
+            depth = cv::imread(depths[i], cv::IMREAD_ANYDEPTH);
             depth_device_.upload(depth.data, depth.step, depth.rows, depth.cols);
 
 //            {
