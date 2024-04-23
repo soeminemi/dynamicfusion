@@ -144,9 +144,10 @@ struct DynamicFusionApp
 int main (int argc, char* argv[])
 {
     assert(argc == 2 && "Usage: ./dynamicfusion <data-directory>");
+    std::cout<<"start the project with path: "<<argv[1]<<std::endl;
     DynamicFusionApp *app;
     app = new DynamicFusionApp(argv[1]);
-
+    std::cout<<"start excute all thread"<<std::endl;
     // executing
     try { app->execute (); }
     catch (const std::bad_alloc& /*e*/) { std::cout << "Bad alloc" << std::endl; }
