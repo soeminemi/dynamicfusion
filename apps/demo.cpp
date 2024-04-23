@@ -70,6 +70,7 @@ struct DynamicFusionApp
 
     bool execute()
     {
+        bool flag_show = false;
         KinFu& dynamic_fusion = *kinfu_;
         cv::Mat depth, image;
         double time_ms = 0;
@@ -94,36 +95,38 @@ struct DynamicFusionApp
             has_image = dynamic_fusion(depth_device_);
 //            }
 
-            if (has_image)
+            if (has_image && flag_show)
                 show_raycasted(dynamic_fusion, i);
+            if(flag_show)
+            {
+                show_depth(depth);
+                cv::imshow("Image", image);
 
-            show_depth(depth);
-            cv::imshow("Image", image);
+                if (!interactive_mode_) {
+                    viz.setViewerPose(dynamic_fusion.getCameraPose());
+                }
 
-            if (!interactive_mode_) {
-                viz.setViewerPose(dynamic_fusion.getCameraPose());
+                int key = cv::waitKey(pause_ ? 0 : 3);
+                show_warp(dynamic_fusion);
+                switch (key) {
+                    case 't':
+                    case 'T' :
+                        show_warp(dynamic_fusion);
+                        break;
+                    case 'i':
+                    case 'I' :
+                        interactive_mode_ = !interactive_mode_;
+                        break;
+                    case 27:
+                        exit_ = true;
+                        break;
+                    case 32:
+                        pause_ = !pause_;
+                        break;
+                }
+                viz.spinOnce(3, true);
+                //exit_ = exit_ || i > 100;
             }
-
-            int key = cv::waitKey(pause_ ? 0 : 3);
-            show_warp(dynamic_fusion);
-            switch (key) {
-                case 't':
-                case 'T' :
-                    show_warp(dynamic_fusion);
-                    break;
-                case 'i':
-                case 'I' :
-                    interactive_mode_ = !interactive_mode_;
-                    break;
-                case 27:
-                    exit_ = true;
-                    break;
-                case 32:
-                    pause_ = !pause_;
-                    break;
-            }
-            viz.spinOnce(3, true);
-            //exit_ = exit_ || i > 100;
         }
         return true;
     }
