@@ -38,7 +38,7 @@ struct DynamicFusionApp
         cv::Mat display;
         depth.convertTo(display, CV_8U, 255.0/4000);
         cv::imshow("Depth", display);
-        cv:waitKey(10);
+        cv::waitKey(10);
     }
 
     void show_raycasted(KinFu& kinfu, int i)
