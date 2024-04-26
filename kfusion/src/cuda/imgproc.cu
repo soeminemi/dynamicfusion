@@ -1,4 +1,4 @@
-#include <host_defines.h>
+#include <cuda_runtime.h>
 #include "device.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -79,7 +79,7 @@ void kfusion::device::truncateDepth(Depth& depth, float max_dist /*meters*/)
 {
     dim3 block (32, 8);
     dim3 grid (divUp (depth.cols (), block.x), divUp (depth.rows (), block.y));
-
+    printf("truncate depth image: %f\n", max_dist*1000.f);
     truncate_depth_kernel<<<grid, block>>>(depth, static_cast<ushort>(max_dist * 1000.f));
     cudaSafeCall ( cudaGetLastError() );
 }
@@ -266,7 +266,6 @@ namespace kfusion
                 float xl = (x - c.x) * finv.x;
                 float yl = (y - c.y) * finv.y;
                 float lambda = sqrtf (xl * xl + yl * yl + 1);
-
                 dists(y, x) = __float2half_rn(depth(y, x) * lambda * 0.001f); //meters
             }
         }

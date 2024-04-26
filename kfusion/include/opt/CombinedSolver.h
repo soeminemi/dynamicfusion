@@ -37,7 +37,7 @@ public:
         unsigned int N = canonical_vertices.size();
 
         m_dims = { D, N };
-
+        std::cout<<"initial warp dims"<<std::endl;
         m_rotationDeform    = createEmptyOptImage({D}, OptImage::Type::FLOAT, 3, OptImage::GPU, true);
         m_translationDeform = createEmptyOptImage({D}, OptImage::Type::FLOAT, 3, OptImage::GPU, true);
 
@@ -48,20 +48,25 @@ public:
         m_liveNormalsOpt       = createEmptyOptImage({N}, OptImage::Type::FLOAT, 3, OptImage::GPU, true);
 
         m_weights              = createEmptyOptImage({N}, OptImage::Type::FLOAT, KNN_NEIGHBOURS, OptImage::GPU, true);
-
+        std::cout<<"reset gpu memory"<<std::endl;
         resetGPUMemory();
+        std::cout<<"init connectivity"<<std::endl;
         initializeConnectivity(m_canonicalVerticesOpenCV);
 
 #ifdef SOLVER_PATH
+        std::cout<<"solver path: "<<m_solverInfo.size()<<","<<std::string(TOSTRING(SOLVER_PATH))<<std::endl;
         if(m_solverInfo.size() == 0)
         {
             std::string solver_file = std::string(TOSTRING(SOLVER_PATH)) + "dynamicfusion.t";
+            std::cout<<"add solvers"<<std::endl;
             addOptSolvers(m_dims, solver_file);
+            std::cout<<"solver added"<<std::endl;
         }
 #else
         std::cerr<<"Please define a path for your solvers."<<std::endl;
         exit(-1);
 #endif
+        std::cout<<"end initial"<<std::endl;
     }
     void initializeConnectivity(const std::vector<cv::Vec3f> canonical_vertices)
     {

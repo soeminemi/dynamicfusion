@@ -3,6 +3,7 @@
 #include <kfusion/cuda/device_array.hpp>
 #include "safe_call.hpp"
 #include <opencv2/core/core.hpp>
+#include <cuda_fp16.h>
 //#define USE_DEPTH
 
 namespace kfusion
@@ -15,7 +16,8 @@ namespace kfusion
         typedef unsigned short ushort;
         typedef unsigned char uchar;
 
-        typedef PtrStepSz<ushort> Dists;
+        // typedef PtrStepSz<ushort> Dists;
+        typedef PtrStepSz<__half> Dists;
         typedef DeviceArray2D<ushort> Depth;
         typedef DeviceArray2D<Normal> Normals;
         typedef DeviceArray2D<Point> Points;
@@ -29,7 +31,7 @@ namespace kfusion
         struct TsdfVolume
         {
         public:
-            typedef ushort2 elem_type;
+            typedef short2 elem_type;
 
             elem_type *const data;
             const int3 dims;
@@ -105,8 +107,8 @@ namespace kfusion
         void clear_volume(TsdfVolume volume);
         void integrate(const Dists& depth, TsdfVolume& volume, const Aff3f& aff, const Projector& proj);
         void project(const Dists& depth, Points& vertices, const Projector& proj);
-        void project_and_remove(PtrStepSz<ushort>& dists, Points &vertices, const Projector &proj);
-        void project_and_remove(const PtrStepSz<ushort>& dists, Points &vertices, const Projector &proj);
+        void project_and_remove(Dists& dists, Points &vertices, const Projector &proj);
+        void project_and_remove(const Dists& dists, Points &vertices, const Projector &proj);
 
         void raycast(const TsdfVolume& volume, const Aff3f& aff, const Mat3f& Rinv,
                      const Reprojector& reproj, Depth& depth, Normals& normals, float step_factor, float delta_factor);
@@ -114,9 +116,11 @@ namespace kfusion
         void raycast(const TsdfVolume& volume, const Aff3f& aff, const Mat3f& Rinv,
                      const Reprojector& reproj, Points& points, Normals& normals, float step_factor, float delta_factor);
 
-        __kf_device__ ushort2 pack_tsdf(float tsdf, int weight);
-        __kf_device__ float unpack_tsdf(ushort2 value, int& weight);
-        __kf_device__ float unpack_tsdf(ushort2 value);
+        __kf_device__ TsdfVolume::elem_type  pack_tsdf(float tsdf, int weight);
+        // __kf_device__ float unpack_tsdf(ushort2 value, int& weight);
+        // __kf_device__ float unpack_tsdf(ushort2 value);
+        __kf_device__ float unpack_tsdf(TsdfVolume::elem_type value, int& weight);
+        __kf_device__ float unpack_tsdf(TsdfVolume::elem_type value);
 
 
         //image proc functions

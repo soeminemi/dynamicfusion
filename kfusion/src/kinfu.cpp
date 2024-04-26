@@ -225,20 +225,20 @@ bool kfusion::KinFu::operator()(const kfusion::cuda::Depth& depth, const kfusion
 
     cuda::computeDists(depth, dists_, p.intr);
     cuda::depthBilateralFilter(depth, curr_.depth_pyr[0], p.bilateral_kernel_size, p.bilateral_sigma_spatial, p.bilateral_sigma_depth);
-
     if (p.icp_truncate_depth_dist > 0)
         kfusion::cuda::depthTruncation(curr_.depth_pyr[0], p.icp_truncate_depth_dist);
-
+    std::cout<<"pyramid levels: "<<LEVELS<<std::endl;
     for (int i = 1; i < LEVELS; ++i)
         cuda::depthBuildPyramid(curr_.depth_pyr[i-1], curr_.depth_pyr[i], p.bilateral_sigma_depth);
 
-    for (int i = 0; i < LEVELS; ++i)
+    for (int i = 0; i < LEVELS; ++i){
 #if defined USE_DEPTH
         cuda::computeNormalsAndMaskDepth(p.intr(i), curr_.depth_pyr[i], curr_.normals_pyr[i]);
 #else
+        std::cout<<"compute point normals"<<std::endl;
         cuda::computePointNormals(p.intr(i), curr_.depth_pyr[i], curr_.points_pyr[i], curr_.normals_pyr[i]);
 #endif
-
+    }
     cuda::waitAllDefaultStream();
 
     //can't perform more on first frame
@@ -260,6 +260,7 @@ bool kfusion::KinFu::operator()(const kfusion::cuda::Depth& depth, const kfusion
 #endif
         curr_.normals_pyr.swap(prev_.normals_pyr);
         curr_.normals_pyr.swap(first_.normals_pyr);
+        std::cout<<"integrated first frame"<<std::endl;
         return ++frame_counter_, false;
     }
 
@@ -271,6 +272,7 @@ bool kfusion::KinFu::operator()(const kfusion::cuda::Depth& depth, const kfusion
 #if defined USE_DEPTH
         bool ok = icp_->estimateTransform(affine, p.intr, curr_.depth_pyr, curr_.normals_pyr, prev_.depth_pyr, prev_.normals_pyr);
 #else
+        std::cout<<"estimate global ICP Transform of frame "<<(frame_counter_)<<std::endl;
         bool ok = icp_->estimateTransform(affine, p.intr, curr_.points_pyr, curr_.normals_pyr, prev_.points_pyr, prev_.normals_pyr);
 #endif
         if (!ok)
@@ -282,6 +284,7 @@ bool kfusion::KinFu::operator()(const kfusion::cuda::Depth& depth, const kfusion
     auto d = curr_.depth_pyr[0];
     auto pts = curr_.points_pyr[0];
     auto n = curr_.normals_pyr[0];
+    std::cout<<"dynamic fusion to normal space"<<std::endl;
     dynamicfusion(d, pts, n);
 
 
@@ -383,9 +386,9 @@ void kfusion::KinFu::dynamicfusion(cuda::Depth& depth, cuda::Cloud live_frame, c
     std::vector<Vec3f> canonical_visible(canonical);
 
     getWarp().warp(canonical, canonical_normals);
-
+    std::cout<<"estimate dynamic warp"<<std::endl;
     optimiser_->optimiseWarpData(canonical, canonical_normals, live, canonical_normals); // Normals are not used yet so just send in same data
-
+    std::cout<<"warped"<<std::endl;
     getWarp().warp(canonical, canonical_normals);
 //    //ScopeTime time("fusion");
     tsdf().surface_fusion(getWarp(), canonical, canonical_visible, depth, camera_pose, params_.intr);

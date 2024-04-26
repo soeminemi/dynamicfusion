@@ -83,7 +83,7 @@ void kfusion::cuda::DeviceMemory::create(size_t sizeBytes_arg)
         sizeBytes_ = sizeBytes_arg;
                         
         cudaSafeCall( cudaMalloc(&data_, sizeBytes_) );
-        
+        std::cout<<"cuda memory allocated: "<<sizeBytes_<<" bytes, addr is: "<<data_<<std::endl;
         //refcount_ = (int*)cv::fastMalloc(sizeof(*refcount_));
         refcount_ = new int;
         *refcount_ = 1;

@@ -19,10 +19,10 @@ namespace kfusion
 
             if (x < tsdf.dims.x && y < tsdf.dims.y)
             {
-                ushort2 *beg = tsdf.beg(x, y);
-                ushort2 *end = beg + tsdf.dims.x * tsdf.dims.y * tsdf.dims.z;
+                short2 *beg = tsdf.beg(x, y);
+                short2 *end = beg + tsdf.dims.x * tsdf.dims.y * tsdf.dims.z;
 
-                for(ushort2* pos = beg; pos != end; pos = tsdf.zstep(pos))
+                for(short2* pos = beg; pos != end; pos = tsdf.zstep(pos))
                     *pos = pack_tsdf (0.f, 0);
             }
         }
@@ -35,7 +35,6 @@ void kfusion::device::clear_volume(TsdfVolume volume)
     dim3 grid (1, 1, 1);
     grid.x = divUp (volume.dims.x, block.x);
     grid.y = divUp (volume.dims.y, block.y);
-
     clear_volume_kernel<<<grid, block>>>(volume);
     cudaSafeCall ( cudaGetLastError () );
 }
@@ -74,7 +73,7 @@ namespace kfusion
                 TsdfVolume::elem_type* vptr = volume.beg(x, y);
                 for(int i = 0; i < volume.dims.z; ++i, vc += zstep, vptr = volume.zstep(vptr))
                 {
-                    float2 coo = proj(vc);
+                    float2 coo = proj(vc); //得到投影到深度相机的图像坐标
 
                     //#if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 300
                     // this is actually workaround for kepler. it doesn't return 0.f for texture
@@ -82,12 +81,12 @@ namespace kfusion
                     if (coo.x < 0 || coo.y < 0 || coo.x >= dists_size.x || coo.y >= dists_size.y)
                         continue;
                     //#endif
+                    // 获取投影点的深度值
                     float Dp = tex2D(dists_tex, coo.x, coo.y);
+                    
                     if(Dp == 0 || vc.z <= 0)
                         continue;
-
                     float sdf = Dp - __fsqrt_rn(dot(vc, vc)); //Dp - norm(v)
-
                     if (sdf >= -volume.trunc_dist)
                     {
                         float tsdf = fmin(1.f, sdf * tranc_dist_inv);
@@ -98,9 +97,12 @@ namespace kfusion
 
                         float tsdf_new = __fdividef(__fmaf_rn(tsdf_prev, weight_prev, tsdf), weight_prev + 1);
                         int weight_new = min (weight_prev + 1, volume.max_weight);
-
-                        //pack and write
+                        // printf("tsdf and weight new: %f,%d\n", tsdf_new, weight_new);
                         gmem::StCs(pack_tsdf (tsdf_new, weight_new), vptr);
+                        // short2 tv = gmem::LdCs(vptr);
+                        // int weight = 0;
+                        // float val = unpack_tsdf(tv, weight);
+                        // printf("tsdf and weight: %f,%d\n", val, weight);
                     }
                 }  // for(;;)
             }
@@ -108,11 +110,21 @@ namespace kfusion
 
         };
 
+        __global__ void check_dist(const Dists& dists)
+        {
+            int x = blockIdx.x * blockDim.x + threadIdx.x;
+            int y = blockIdx.y * blockDim.y + threadIdx.y;
 
+            if (x >= dists.cols || y >= dists.rows)
+                return;
+            ushort z = dists(y, x);
+            return;
+            
+        }
         __global__ void integrate_kernel( const TsdfIntegrator integrator, TsdfVolume volume) { integrator(volume); };
 
         __global__
-        void project_kernel(const Projector proj, PtrStep<Point> points, PtrStepSz<ushort> depth, int rows, int cols)
+        void project_kernel(const Projector proj, PtrStep<Point> points, Dists depth, int rows, int cols)
         {
 
             int x = threadIdx.x + blockIdx.x * blockDim.x;
@@ -138,7 +150,8 @@ namespace kfusion
     }
 }
 
-void kfusion::device::integrate(const PtrStepSz<ushort>& dists, TsdfVolume& volume, const Aff3f& aff, const Projector& proj)
+// void kfusion::device::integrate(const PtrStepSz<ushort>& dists, TsdfVolume& volume, const Aff3f& aff, const Projector& proj)
+void kfusion::device::integrate(const Dists& dists, TsdfVolume& volume, const Aff3f& aff, const Projector& proj)
 {
     TsdfIntegrator ti;
     ti.dists_size = make_int2(dists.cols, dists.rows);
@@ -154,14 +167,16 @@ void kfusion::device::integrate(const PtrStepSz<ushort>& dists, TsdfVolume& volu
 
     dim3 block(32, 8);
     dim3 grid(divUp(volume.dims.x, block.x), divUp(volume.dims.y, block.y));
-
+    // check_dist<<<grid, block>>>(dists);
+    // cudaDeviceSynchronize();
     integrate_kernel<<<grid, block>>>(ti, volume);
     cudaSafeCall ( cudaGetLastError () );
     cudaSafeCall ( cudaDeviceSynchronize() );
 }
 
 //TODO: rename as now projecting + removing from depth
-void kfusion::device::project_and_remove(const PtrStepSz<ushort>& dists, Points &vertices, const Projector &proj)
+// void kfusion::device::project_and_remove(const PtrStepSz<ushort>& dists, Points &vertices, const Projector &proj)
+void kfusion::device::project_and_remove(const Dists& dists, Points &vertices, const Projector &proj)
 {
     dists_tex.filterMode = cudaFilterModePoint;
     dists_tex.addressMode[0] = cudaAddressModeBorder;
@@ -177,7 +192,8 @@ void kfusion::device::project_and_remove(const PtrStepSz<ushort>& dists, Points 
 }
 
 //TODO: rename as now projecting + removing from depth
-void kfusion::device::project(const PtrStepSz<ushort> &dists, Points &vertices, const Projector &proj)
+// void kfusion::device::project(const PtrStepSz<ushort> &dists, Points &vertices, const Projector &proj)
+void kfusion::device::project(const Dists &dists, Points &vertices, const Projector &proj)
 {
     dists_tex.filterMode = cudaFilterModePoint;
     dists_tex.addressMode[0] = cudaAddressModeBorder;
@@ -528,7 +544,7 @@ namespace kfusion
             {
                 return unpack_tsdf(*volume(x, y, z), weight);
             }
-
+            //在volume中获取cloud点，scan the volume
             __kf_device__ void operator () (PtrSz<Point> output) const
             {
                 int x = threadIdx.x + blockIdx.x * CTA_SIZE_X;
@@ -537,7 +553,14 @@ namespace kfusion
                 __shared__ int cta_buffer[CTA_SIZE];
 #endif
 
-#if __CUDA_ARCH__ >= 120
+
+#if __CUDA_ARCH__ >= 700
+                // unsigned active = __activemask();
+                unsigned active = 0xFFFFFFFF;
+                if (__all_sync (active, x >= volume.dims.x) || __all_sync (active, y >= volume.dims.y))
+                    return;
+
+#elif __CUDA_ARCH__ >= 120
                 if (__all (x >= volume.dims.x) || __all (y >= volume.dims.y))
                     return;
 #else
@@ -632,8 +655,12 @@ namespace kfusion
                             } /* if (z + 1 < volume.dims.z) */
                         } /* if (W != 0 && F != 1.f) */
                     } /* if (x < volume.dims.x && y < volume.dims.y) */
-
-#if __CUDA_ARCH__ >= 200
+#if __CUDA_ARCH__ >=700
+                    ///not we fulfilled points array at current iteration
+                    // unsigned active = __activemask();
+                    unsigned active = 0xFFFFFFFF;
+                    int total_warp = __popc (__ballot_sync (active, local_count > 0)) + __popc (__ballot_sync (active, local_count > 1)) + __popc (__ballot_sync (active, local_count > 2));
+#elif __CUDA_ARCH__ >= 200
                     ///not we fulfilled points array at current iteration
                     int total_warp = __popc (__ballot (local_count > 0)) + __popc (__ballot (local_count > 1)) + __popc (__ballot (local_count > 2));
 #else
@@ -644,9 +671,10 @@ namespace kfusion
                     __shared__ float storage_X[CTA_SIZE * MAX_LOCAL_POINTS];
                     __shared__ float storage_Y[CTA_SIZE * MAX_LOCAL_POINTS];
                     __shared__ float storage_Z[CTA_SIZE * MAX_LOCAL_POINTS];
-
+                   
                     if (total_warp > 0)
                     {
+                        //  printf("total warp: %d, %d, %d\n", total_warp, blockIdx.x, blockIdx.y);
                         int lane = Warp::laneId ();
                         int storage_index = (ftid >> Warp::LOG_WARP_SIZE) * Warp::WARP_SIZE * MAX_LOCAL_POINTS;
 
@@ -804,7 +832,8 @@ size_t kfusion::device::extractCloud (const TsdfVolume& volume, const Aff3f& aff
 
     dim3 block (FS::CTA_SIZE_X, FS::CTA_SIZE_Y);
     dim3 grid (divUp (volume.dims.x, block.x), divUp (volume.dims.y, block.y));
-
+    printf("extract cloud grid %d %d block %d %d\n", grid.x, grid.y, block.x, block.y);
+    printf("volume dims %d %d %d\n", volume.dims.x, volume.dims.y, volume.dims.z);
     extract_kernel<<<grid, block>>>(fs, output);
     cudaSafeCall ( cudaGetLastError () );
     cudaSafeCall (cudaDeviceSynchronize ());
@@ -824,7 +853,7 @@ void kfusion::device::extractNormals (const TsdfVolume& volume, const PtrSz<Poin
 
     dim3 block (32, 8);
     dim3 grid (divUp ((int)points.size, block.x));
-
+    printf("extract normals %d,%d\n",grid.x,grid.y);
     extract_normals_kernel<<<grid, block>>>(en, output);
     cudaSafeCall ( cudaGetLastError () );
     cudaSafeCall (cudaDeviceSynchronize ());

@@ -25,8 +25,6 @@ struct DynamicFusionApp
     {
         KinFuParams params = KinFuParams::default_params_dynamicfusion();
         kinfu_ = KinFu::Ptr( new KinFu(params) );
-
-
         cv::viz::WCube cube(cv::Vec3d::all(0), cv::Vec3d(params.volume_size), true, cv::viz::Color::apricot());
         viz.showWidget("cube", cube, params.volume_pose);
         viz.showWidget("coor", cv::viz::WCoordinateSystem(0.1));
@@ -87,14 +85,16 @@ struct DynamicFusionApp
         for (int i = 0; i < depths.size() && !exit_ && !viz.wasStopped(); i++) {
             image = cv::imread(images[i], cv::IMREAD_COLOR);
             depth = cv::imread(depths[i], cv::IMREAD_ANYDEPTH);
+            std::cout<<"upload depth data"<<std::endl;
             depth_device_.upload(depth.data, depth.step, depth.rows, depth.cols);
 
 //            {
 //                SampledScopeTime fps(time_ms);
 //                (void) fps;
+            std::cout<<"start fusion"<<std::endl;
             has_image = dynamic_fusion(depth_device_);
 //            }
-
+            std::cout<<"start to show result: "<<flag_show<<std::endl;
             if (has_image && flag_show)
                 show_raycasted(dynamic_fusion, i);
             if(flag_show)

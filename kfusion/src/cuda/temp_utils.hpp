@@ -580,26 +580,36 @@ namespace kfusion
 
             static __kf_device__ int Ballot(int predicate, volatile int* cta_buffer)
             {
-#if __CUDA_ARCH__ >= 200
+// #if __CUDA_ARCH__ >= 700
                 (void)cta_buffer;
-                return __ballot(predicate);
-#else
-                int tid = Block::flattenedThreadId();
-                cta_buffer[tid] = predicate ? (1 << (tid & 31)) : 0;
-                return warp_reduce(cta_buffer, tid);
-#endif
+                // unsigned active = __activemask();
+                unsigned active = 0xFFFFFFFF;
+                return __ballot_sync(active, predicate);
+// #elif __CUDA_ARCH__ >= 200
+//                 (void)cta_buffer;
+//                 return __ballot(predicate);
+// #else
+//                 int tid = Block::flattenedThreadId();
+//                 cta_buffer[tid] = predicate ? (1 << (tid & 31)) : 0;
+//                 return warp_reduce(cta_buffer, tid);
+// #endif
             }
 
             static __kf_device__ bool All(int predicate, volatile int* cta_buffer)
             {
-#if __CUDA_ARCH__ >= 200
+// #if __CUDA_ARCH__ >= 700
                 (void)cta_buffer;
-                return __all(predicate);
-#else
-                int tid = Block::flattenedThreadId();
-                cta_buffer[tid] = predicate ? 1 : 0;
-                return warp_reduce(cta_buffer, tid) == 32;
-#endif
+                // unsigned active = __activemask();
+                unsigned active = 0xFFFFFFFF;
+                return __all_sync(active,predicate);
+// #elif __CUDA_ARCH__ >= 200
+//                 (void)cta_buffer;
+//                 return __all(predicate);
+// #else
+//                 int tid = Block::flattenedThreadId();
+//                 cta_buffer[tid] = predicate ? 1 : 0;
+//                 return warp_reduce(cta_buffer, tid) == 32;
+// #endif
             }
         };
     }
