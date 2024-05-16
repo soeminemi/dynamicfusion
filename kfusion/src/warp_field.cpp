@@ -47,6 +47,7 @@ void WarpField::init(const cv::Mat& first_frame)
 //    FIXME:: this is a test, remove later
     voxel_size = 1;
     int step = 50;
+    std::cout << "voxel size init mat: " << voxel_size << ","<<first_frame.cols<<" * "<< first_frame.rows<<std::endl;
     for(size_t i = 0; i < first_frame.rows; i+=step)
         for(size_t j = 0; j < first_frame.cols; j+=step)
         {
@@ -71,7 +72,7 @@ void WarpField::init(const std::vector<Vec3f>& first_frame)
     nodes_->resize(first_frame.size());
     auto voxel_size = kfusion::KinFuParams::default_params_dynamicfusion().volume_size[0] /
                       kfusion::KinFuParams::default_params_dynamicfusion().volume_dims[0];
-
+    std::cout<<"node size init vec: "<<nodes_->size()<<std::endl;
 //    FIXME: this is a test, remove
     voxel_size = 1;
     for (size_t i = 0; i < first_frame.size(); i++)
@@ -120,6 +121,7 @@ void WarpField::energy_data(const std::vector<Vec3f> &canonical_vertices,
                             const std::vector<Vec3f> &live_normals
 )
 {
+    std::cout<<"node size: "<<nodes_->size()<<std::endl;
     ceres::Problem problem;
     float weights[KNN_NEIGHBOURS];
     unsigned long indices[KNN_NEIGHBOURS];
@@ -150,6 +152,7 @@ void WarpField::energy_data(const std::vector<Vec3f> &canonical_vertices,
         problem.AddResidualBlock(cost_function,  NULL /* squared loss */, warpProblem.mutable_epsilon(indices));
 
     }
+    //基于ceres求解warpField
     ceres::Solver::Options options;
 //    options.minimizer_type = ceres::TRUST_REGION;
     options.linear_solver_type = ceres::SPARSE_SCHUR;

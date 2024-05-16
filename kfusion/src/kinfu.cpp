@@ -119,7 +119,7 @@ kfusion::KinFu::KinFu(const KinFuParams& params) : frame_counter_(0), params_(pa
     solverParameters.useOptLM = true;
     solverParameters.earlyOut = true;
 
-    optimiser_ = new WarpFieldOptimiser(warp_, solverParameters);
+    optimiser_ = new WarpFieldOptimiser(warp_, solverParameters); //solver is the combined solver, which is constructed with Opt, an old pkg
     allocate_buffers();
     reset();
 }
@@ -340,20 +340,21 @@ void kfusion::KinFu::renderImage(cuda::Image& image, int flag)
 }
 
 /**
- * \brief
+ * \brief 将当前深度图和当前fusion的结果进行融合，计算动态warp
  * \param image
  * \param flag
  */
 void kfusion::KinFu::dynamicfusion(cuda::Depth& depth, cuda::Cloud live_frame, cuda::Normals current_normals)
 {
+    //1. 获取当前liveframe的相机pose下，fusion结果的成像图，得到点云及对应的法线
     cuda::Cloud cloud;
     cuda::Normals normals;
     cloud.create(depth.rows(), depth.cols());
     normals.create(depth.rows(), depth.cols());
     auto camera_pose = poses_.back();
     tsdf().raycast(camera_pose, params_.intr, cloud, normals);
-
-    cv::Mat cloud_host(depth.rows(), depth.cols(), CV_32FC4);
+    // 将点云从显存拷贝到内存上
+    cv::Mat cloud_host(depth.rows(), depth.cols(), CV_32FC4); //内存上当前fusion结果的点云
     cloud.download(cloud_host.ptr<Point>(), cloud_host.step);
     std::vector<Vec3f> canonical(cloud_host.rows * cloud_host.cols);
     auto inverse_pose = camera_pose.inv(cv::DECOMP_SVD);
@@ -387,7 +388,8 @@ void kfusion::KinFu::dynamicfusion(cuda::Depth& depth, cuda::Cloud live_frame, c
 
     getWarp().warp(canonical, canonical_normals);
     std::cout<<"estimate dynamic warp"<<std::endl;
-    optimiser_->optimiseWarpData(canonical, canonical_normals, live, canonical_normals); // Normals are not used yet so just send in same data
+    // getWarp().energy_data(canonical, canonical_normals, live, canonical_normals);
+    // optimiser_->optimiseWarpData(canonical, canonical_normals, live, canonical_normals); // Normals are not used yet so just send in same data
     std::cout<<"warped"<<std::endl;
     getWarp().warp(canonical, canonical_normals);
 //    //ScopeTime time("fusion");

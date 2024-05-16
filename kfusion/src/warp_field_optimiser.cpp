@@ -1,5 +1,8 @@
 #include "kfusion/warp_field_optimiser.hpp"
-kfusion::WarpFieldOptimiser::WarpFieldOptimiser(WarpField *warp, CombinedSolver *solver) : solver_(solver), warp_(warp){}
+kfusion::WarpFieldOptimiser::WarpFieldOptimiser(WarpField *warp, CombinedSolver *solver) : solver_(solver), warp_(warp)
+{
+    ;
+}
 kfusion::WarpFieldOptimiser::WarpFieldOptimiser(WarpField *warp, CombinedSolverParameters params) : warp_(warp)
 {
     solver_ = new CombinedSolver(warp, params);

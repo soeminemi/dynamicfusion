@@ -68,7 +68,7 @@ struct DynamicFusionApp
 
     bool execute()
     {
-        bool flag_show = false;
+        bool flag_show = true;
         KinFu& dynamic_fusion = *kinfu_;
         cv::Mat depth, image;
         double time_ms = 0;
