@@ -49,6 +49,7 @@ void WarpField::init(const cv::Mat& first_frame)
     int step = 50;
     std::cout << "voxel size init mat: " << voxel_size << ","<<first_frame.cols<<" * "<< first_frame.rows<<std::endl;
     int node_num = 0;
+    //并不是所有的nodes都是有效的
     for(size_t i = 0; i < first_frame.rows; i+=step)
         for(size_t j = 0; j < first_frame.cols; j+=step)
         {
@@ -153,13 +154,13 @@ void WarpField::energy_data(const std::vector<Vec3f> &canonical_vertices,
                                                                              weights,
                                                                              indices);
         problem.AddResidualBlock(cost_function,  NULL /* squared loss */, warpProblem.mutable_epsilon(indices));
-
     }
     //基于ceres求解warpField
     ceres::Solver::Options options;
 //    options.minimizer_type = ceres::TRUST_REGION;
     options.linear_solver_type = ceres::SPARSE_SCHUR;
     options.minimizer_progress_to_stdout = true;
+    options.max_num_iterations = 5;
     // options.num_linear_solver_threads = 8;
     options.num_threads = 8;
     ceres::Solver::Summary summary;
@@ -282,6 +283,7 @@ void WarpField::buildKDTree()
 {
     //    Build kd-tree with current warp nodes.
     cloud.pts.resize(nodes_->size());
+    // 没有判断node的有效性！！
     for(size_t i = 0; i < nodes_->size(); i++)
         cloud.pts[i] = nodes_->at(i).vertex;
     index_->buildIndex();
