@@ -40,7 +40,7 @@ WarpField::~WarpField()
  */
 void WarpField::init(const cv::Mat& first_frame)
 {
-    nodes_->resize(first_frame.cols * first_frame.rows);
+    nodes_->reserve(first_frame.cols * first_frame.rows);
     auto voxel_size = kfusion::KinFuParams::default_params_dynamicfusion().volume_size[0] /
                       kfusion::KinFuParams::default_params_dynamicfusion().volume_dims[0];
 
@@ -56,9 +56,14 @@ void WarpField::init(const cv::Mat& first_frame)
             auto point = first_frame.at<Point>(i,j);
             if(!std::isnan(point.x))
             {
-                nodes_->at(i*first_frame.cols+j).transform = utils::DualQuaternion<float>();
-                nodes_->at(i*first_frame.cols+j).vertex = Vec3f(point.x,point.y,point.z);
-                nodes_->at(i*first_frame.cols+j).weight = 3 * voxel_size;
+                deformation_node tnode;
+                tnode.transform = utils::DualQuaternion<float>();
+                tnode.vertex = Vec3f(point.x,point.y,point.z);
+                tnode.weight = 3 * voxel_size;
+                nodes_->push_back(tnode);
+                // nodes_->at(i*first_frame.cols+j).transform = utils::DualQuaternion<float>();
+                // nodes_->at(i*first_frame.cols+j).vertex = Vec3f(point.x,point.y,point.z);
+                // nodes_->at(i*first_frame.cols+j).weight = 3 * voxel_size;
                 node_num ++;
             }
         }
@@ -73,7 +78,8 @@ void WarpField::init(const cv::Mat& first_frame)
  */
 void WarpField::init(const std::vector<Vec3f>& first_frame)
 {
-    nodes_->resize(first_frame.size());
+    // nodes_->resize(first_frame.size());
+    nodes_->reserve(first_frame.size());
     auto voxel_size = kfusion::KinFuParams::default_params_dynamicfusion().volume_size[0] /
                       kfusion::KinFuParams::default_params_dynamicfusion().volume_dims[0];
     std::cout<<"node size init vec: "<<nodes_->size()<<std::endl;
@@ -84,9 +90,14 @@ void WarpField::init(const std::vector<Vec3f>& first_frame)
         auto point = first_frame[i];
         if (!std::isnan(point[0]))
         {
-            nodes_->at(i).transform = utils::DualQuaternion<float>();
-            nodes_->at(i).vertex = point;
-            nodes_->at(i).weight = 3 * voxel_size;
+            deformation_node tnode;
+            tnode.transform = utils::DualQuaternion<float>();
+            tnode.vertex = point;
+            tnode.weight = 3 * voxel_size;
+            nodes_->push_back(tnode);
+            // nodes_->at(i).transform = utils::DualQuaternion<float>();
+            // nodes_->at(i).vertex = point;
+            // nodes_->at(i).weight = 3 * voxel_size;
         }
     }
     buildKDTree();
@@ -155,6 +166,7 @@ void WarpField::energy_data(const std::vector<Vec3f> &canonical_vertices,
                                                                              indices);
         problem.AddResidualBlock(cost_function,  NULL /* squared loss */, warpProblem.mutable_epsilon(indices));
     }
+    std::cout<<"start solve"<<std::endl;
     //基于ceres求解warpField
     ceres::Solver::Options options;
 //    options.minimizer_type = ceres::TRUST_REGION;

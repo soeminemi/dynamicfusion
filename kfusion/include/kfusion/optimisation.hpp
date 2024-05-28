@@ -161,6 +161,7 @@ public:
     explicit WarpProblem(kfusion::WarpField *warp) : warpField_(warp)
     {
         parameters_ = new double[warpField_->getNodes()->size() * 6];
+        std::cout<<"parameter size: "<<warpField_->getNodes()->size() * 6<<std::endl;
         for(int i = 0; i < warp->getNodes()->size() * 6; i+=6)
         {
             auto transform = warp->getNodes()->at(i / 6).transform;
