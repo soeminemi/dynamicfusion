@@ -48,6 +48,7 @@ void WarpField::init(const cv::Mat& first_frame)
     voxel_size = 1;
     int step = 50;
     std::cout << "voxel size init mat: " << voxel_size << ","<<first_frame.cols<<" * "<< first_frame.rows<<std::endl;
+    int node_num = 0;
     for(size_t i = 0; i < first_frame.rows; i+=step)
         for(size_t j = 0; j < first_frame.cols; j+=step)
         {
@@ -57,9 +58,11 @@ void WarpField::init(const cv::Mat& first_frame)
                 nodes_->at(i*first_frame.cols+j).transform = utils::DualQuaternion<float>();
                 nodes_->at(i*first_frame.cols+j).vertex = Vec3f(point.x,point.y,point.z);
                 nodes_->at(i*first_frame.cols+j).weight = 3 * voxel_size;
+                node_num ++;
             }
         }
     buildKDTree();
+    std::cout<<"effective node number is: "<<node_num<<std::endl;
 }
 
 /**
@@ -157,7 +160,7 @@ void WarpField::energy_data(const std::vector<Vec3f> &canonical_vertices,
 //    options.minimizer_type = ceres::TRUST_REGION;
     options.linear_solver_type = ceres::SPARSE_SCHUR;
     options.minimizer_progress_to_stdout = true;
-    options.num_linear_solver_threads = 8;
+    // options.num_linear_solver_threads = 8;
     options.num_threads = 8;
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);

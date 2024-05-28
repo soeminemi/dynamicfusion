@@ -315,7 +315,6 @@ void kfusion::cuda::TsdfVolume::compute_points()
     *cloud_ = fetchCloud(*cloud_buffer_);
     *cloud_host_ = cv::Mat(1, (int)cloud_->size(), CV_32FC4);
     cloud_->download(cloud_host_->ptr<Point>());
-    std::cout<<"cloud size: "<<cloud_->size()<<std::endl;
 }
 
 void kfusion::cuda::TsdfVolume::compute_normals()

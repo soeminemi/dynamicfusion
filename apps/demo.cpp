@@ -85,6 +85,7 @@ struct DynamicFusionApp
         for (int i = 0; i < depths.size() && !exit_ && !viz.wasStopped(); i++) {
             image = cv::imread(images[i], cv::IMREAD_COLOR);
             depth = cv::imread(depths[i], cv::IMREAD_ANYDEPTH);
+            depth = depth / 4;
             std::cout<<"upload depth data"<<std::endl;
             depth_device_.upload(depth.data, depth.step, depth.rows, depth.cols);
 

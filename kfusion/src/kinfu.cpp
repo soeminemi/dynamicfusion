@@ -18,13 +18,17 @@ kfusion::KinFuParams kfusion::KinFuParams::default_params_dynamicfusion()
 
     KinFuParams p;
 
-    p.cols = 640;  //pixels
-    p.rows = 480;  //pixels
-    p.intr = Intr(570.342f, 570.342f, 320.f, 240.f);
+    // p.cols = 640;  //pixels
+    // p.rows = 480;  //pixels
+    // p.intr = Intr(570.342f, 570.342f, 320.f, 240.f);
+    
+    p.cols = 1280;  //pixels
+    p.rows = 720;  //pixels
+    p.intr = Intr(898.03f, 898.75f, 653.166f, 353.579f);
 
     p.volume_dims = Vec3i::all(256);  //number of voxels
-    p.volume_size = Vec3f::all(1.f);  //meters
-    p.volume_pose = Affine3f().translate(Vec3f(-p.volume_size[0]/2, -p.volume_size[1]/2, 0.5f));
+    p.volume_size = Vec3f::all(1.8f);  //meters
+    p.volume_pose = Affine3f().translate(Vec3f(-p.volume_size[0]/2, -p.volume_size[1]/2, 1.0f));
 
     p.bilateral_sigma_depth = 0.04f;  //meter
     p.bilateral_sigma_spatial = 4.5; //pixels
@@ -286,6 +290,7 @@ bool kfusion::KinFu::operator()(const kfusion::cuda::Depth& depth, const kfusion
     auto n = curr_.normals_pyr[0];
     std::cout<<"dynamic fusion to normal space"<<std::endl;
     dynamicfusion(d, pts, n);
+    // volume_->integrate(dists_, poses_.back(), p.intr);
 
 
     ///////////////////////////////////////////////////////////////////////////////////////////
@@ -388,7 +393,7 @@ void kfusion::KinFu::dynamicfusion(cuda::Depth& depth, cuda::Cloud live_frame, c
 
     getWarp().warp(canonical, canonical_normals);
     std::cout<<"estimate dynamic warp"<<std::endl;
-    // getWarp().energy_data(canonical, canonical_normals, live, canonical_normals);
+    getWarp().energy_data(canonical, canonical_normals, live, canonical_normals);
     // optimiser_->optimiseWarpData(canonical, canonical_normals, live, canonical_normals); // Normals are not used yet so just send in same data
     std::cout<<"warped"<<std::endl;
     getWarp().warp(canonical, canonical_normals);
