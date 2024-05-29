@@ -142,7 +142,9 @@ void WarpField::energy_data(const std::vector<Vec3f> &canonical_vertices,
     unsigned long indices[KNN_NEIGHBOURS];
 
     WarpProblem warpProblem(this);
-    for(int i = 0; i < live_vertices.size(); i++)
+    int block_size = 0;
+    int step = 10;
+    for(int i = 0; i < live_vertices.size(); i+=step)
     {
         if(std::isnan(canonical_vertices[i][0]) ||
            std::isnan(canonical_vertices[i][1]) ||
@@ -165,8 +167,9 @@ void WarpField::energy_data(const std::vector<Vec3f> &canonical_vertices,
                                                                              weights,
                                                                              indices);
         problem.AddResidualBlock(cost_function,  NULL /* squared loss */, warpProblem.mutable_epsilon(indices));
+        block_size ++;
     }
-    std::cout<<"start solve"<<std::endl;
+    std::cout<<"start solve, with block size: "<<block_size<<std::endl;
     //基于ceres求解warpField
     ceres::Solver::Options options;
 //    options.minimizer_type = ceres::TRUST_REGION;
