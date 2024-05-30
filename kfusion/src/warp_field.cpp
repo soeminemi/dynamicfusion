@@ -143,9 +143,11 @@ void WarpField::energy_data(const std::vector<Vec3f> &canonical_vertices,
 
     WarpProblem warpProblem(this);
     int block_size = 0;
-    int step = 10;
+    int step = 1;
     for(int i = 0; i < live_vertices.size(); i+=step)
     {
+        if(rand()%100>2)
+            continue;
         if(std::isnan(canonical_vertices[i][0]) ||
            std::isnan(canonical_vertices[i][1]) ||
            std::isnan(canonical_vertices[i][2]) ||
@@ -172,8 +174,8 @@ void WarpField::energy_data(const std::vector<Vec3f> &canonical_vertices,
     std::cout<<"start solve, with block size: "<<block_size<<std::endl;
     //基于ceres求解warpField
     ceres::Solver::Options options;
-//    options.minimizer_type = ceres::TRUST_REGION;
-    options.linear_solver_type = ceres::SPARSE_SCHUR;
+   options.minimizer_type = ceres::TRUST_REGION;
+    // options.linear_solver_type = ceres::SPARSE_SCHUR;
     options.minimizer_progress_to_stdout = true;
     options.max_num_iterations = 5;
     // options.num_linear_solver_threads = 8;
