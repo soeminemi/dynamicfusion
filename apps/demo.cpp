@@ -41,7 +41,7 @@ struct DynamicFusionApp
 
     void show_raycasted(KinFu& kinfu, int i)
     {
-        const int mode = 3;
+        const int mode = 0;
         if (interactive_mode_)
             kinfu.renderImage(view_device_, viz.getViewerPose(), mode);
         else
@@ -54,9 +54,10 @@ struct DynamicFusionApp
         std::string path = TOSTRING(OUTPUT_PATH) + std::to_string(i) + ".jpg";
         cv::imwrite(path, view_host_);
 #endif
-
-        cv::imshow("Scene", view_host_);
-        cv::waitKey(100);
+        // cv::warpAffine(src, dst, rot_mat, cv::Size(720,1280));
+        cv::transpose(view_host_, dst);
+        cv::imshow("Scene", dst);
+        cv::waitKey(10);
 
     }
 
@@ -68,6 +69,11 @@ struct DynamicFusionApp
 
     bool execute()
     {
+        video.open("output1.avi", cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 30, cv::Size(720, 1280));
+        if(!video.isOpened())
+        {
+            std::cout<<"open video writer failed"<<std::endl;
+        }
         bool flag_show = true;
         KinFu& dynamic_fusion = *kinfu_;
         cv::Mat depth, image;
@@ -82,10 +88,24 @@ struct DynamicFusionApp
         std::sort(depths.begin(), depths.end());
         std::sort(images.begin(), images.end());
 
-        for (int i = 0; i < depths.size() && !exit_ && !viz.wasStopped(); i++) {
+        for (int i = 300; i < depths.size() && !exit_ && !viz.wasStopped(); i++) {
             image = cv::imread(images[i], cv::IMREAD_COLOR);
+            if(i > 580)
+                continue;
             depth = cv::imread(depths[i], cv::IMREAD_ANYDEPTH);
             depth = depth / 4;
+            for (size_t i = 0; i < depth.rows; i++)
+            {
+                for (size_t j = 0; j < depth.cols; j++)
+                {
+                    if(depth.at<ushort>(i,j)>1500)
+                    {
+                        depth.at<ushort>(i,j) = 0;
+                    }
+                }
+                
+            }
+            
             std::cout<<"upload depth data"<<std::endl;
             depth_device_.upload(depth.data, depth.step, depth.rows, depth.cols);
 
@@ -96,8 +116,14 @@ struct DynamicFusionApp
             has_image = dynamic_fusion(depth_device_);
 //            }
             std::cout<<"start to show result: "<<flag_show<<std::endl;
-            if (has_image && flag_show)
+            if (has_image && flag_show){
                 show_raycasted(dynamic_fusion, i);
+                std::cout<<"write to the video: "<<dst.rows<<", "<<dst.cols<<std::endl;
+                video<<(dst);
+                std::stringstream sss;
+                sss<<"./videos/frame_"<<i<<".jpg";
+                cv::imwrite(sss.str(),dst);
+            }
             if(flag_show)
             {
                 show_depth(depth);
@@ -129,6 +155,9 @@ struct DynamicFusionApp
                 //exit_ = exit_ || i > 100;
             }
         }
+
+        video.release();
+        std::cout<<"release the video writer"<<std::endl;
         return true;
     }
 
@@ -141,7 +170,8 @@ struct DynamicFusionApp
     cv::Mat view_host_;
     cuda::Image view_device_;
     cuda::Depth depth_device_;
-
+    cv::VideoWriter video;
+    cv::Mat dst;
 
 };
 
